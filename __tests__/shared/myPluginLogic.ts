@@ -1,9 +1,17 @@
 // noinspection ES6PreferShortImport
 
-import { TAgent, IMessageHandler } from '@veramo/core-types'
-import { IMyAgentPlugin } from '../../src/types/IMyAgentPlugin.js'
+import { TAgent, IMessageHandler, ICredentialPlugin, IDIDManager, IKeyManager, IDataStore, IDataStoreORM, IResolver } from '@veramo/core-types'
+import { createStarchatQuestionMessage } from '../../src/message-handler/starchat-message-handler.js'
+import { IDIDComm } from '@veramo/did-comm'
+import { ICredentialIssuerLD } from '@veramo/credential-ld'
 
-type ConfiguredAgent = TAgent<IMyAgentPlugin & IMessageHandler>
+type ConfiguredAgent = TAgent<
+  IDIDManager & 
+  IKeyManager & 
+  IDIDComm & 
+  ICredentialPlugin &
+  IMessageHandler
+>
 
 export default (testContext: {
   getAgent: () => ConfiguredAgent
@@ -22,12 +30,18 @@ export default (testContext: {
     })
 
     it('should foo', async () => {
-      const result = await agent.myPluginFoo({
-        did: 'did:ethr:goerli:0xb09b66026ba5909a7cfe99b76875431d2b8d5190',
-        foo: 'lorem',
-        bar: 'ipsum',
+      console.log("should.")
+      const did1 = await agent.didManagerCreate({ alias: "did1"})
+      const did2 = await agent.didManagerCreate({ alias: "did2"})
+
+      const questionMessage = createStarchatQuestionMessage("What is rice?", did1.did, did2.did)
+      const packed = await agent.packDIDCommMessage({
+        packing: 'authcrypt',
+        message: questionMessage
       })
-      expect(result).toEqual({ foobar: 'ipsum' })
+
+      const res = await agent.handleMessage({ raw: packed.message })
+      console.log("res: ", res)
     })
   })
 }

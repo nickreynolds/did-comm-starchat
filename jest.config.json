@@ -27,6 +27,9 @@
   "testMatch": [
     "**/__tests__/**/*.test.*"
   ],
+  "moduleNameMapper": {
+    "^(\\.{1,2}/.*)\\.js$": "$1"
+  },
   "transform": {
     "^.+\\.m?tsx?$": [
       "ts-jest",
