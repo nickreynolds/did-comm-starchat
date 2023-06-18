@@ -74,7 +74,7 @@ export class StarchatQuestionMessageHandler extends AbstractMessageHandler {
         }
 
         const answer = await getAnswer(data.queryInput, this.hfToken)
-        // console.log("answer: ", answer)
+        console.log("answer: ", answer)
         const cred = await context.agent.createVerifiableCredential({
           credential: {
             issuer: { id: to },
