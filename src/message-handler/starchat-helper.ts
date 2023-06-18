@@ -1,8 +1,8 @@
-async function query(data: any): Promise<any> {
+async function query(data: any, token: string): Promise<any> {
 	const response = await fetch(
 		"https://api-inference.huggingface.co/models/HuggingFaceH4/starchat-beta",
 		{
-			headers: { Authorization: "Bearer ", 'Content-Type': "application/json" },
+			headers: { Authorization: `Bearer ${token}`, 'Content-Type': "application/json" },
 			method: "POST",
 			body: JSON.stringify(data),
 		}
@@ -13,10 +13,10 @@ async function query(data: any): Promise<any> {
 	return result;
 }
 
-export async function getAnswer(queryInput: string): Promise<string> {
+export async function getAnswer(queryInput: string, token: string): Promise<string> {
 	const modQuery = queryInput + "<|end|>\n<|assistant|>\n"
 
-	const res = await query({"inputs": modQuery})
+	const res = await query({"inputs": modQuery}, token)
 	// console.log("res: ", res)
 
 	const text = await res.text()
@@ -27,7 +27,7 @@ export async function getAnswer(queryInput: string): Promise<string> {
 	let answer = generatedText.substring(modQuery.length)
 
 	while (!answer.includes('<|end|>') && iterations < 100) {
-		const r = await query({"inputs": modQuery + answer })
+		const r = await query({"inputs": modQuery + answer }, token)
 		const generatedText2 = JSON.parse(await r.text())[0].generated_text
 		answer = generatedText2.substring(modQuery.length)
 		iterations++
@@ -42,4 +42,4 @@ export async function getAnswer(queryInput: string): Promise<string> {
 	return finalAnswer
 }
 
-console.log(await getAnswer("Give me 5 use cases for the Veramo DID framework."))
+// console.log(await getAnswer("Give me 5 use cases for the Veramo DID framework."))

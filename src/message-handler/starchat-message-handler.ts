@@ -3,7 +3,7 @@ import { VerifiableCredential } from '@veramo/core'
 import { AbstractMessageHandler, Message } from '@veramo/message-handler'
 import Debug from 'debug'
 import { v4 } from 'uuid'
-import { IDIDComm } from '@veramo/did-comm'
+import { DIDCommMessageMediaType, IDIDComm } from '@veramo/did-comm'
 import { IDIDCommMessage } from '@veramo/did-comm'
 import { getAnswer } from './starchat-helper.js'
 
@@ -14,7 +14,7 @@ type IContext = IAgentContext<IDIDManager & IKeyManager & IDIDComm & ICredential
 const STARCHAT_QUESTION_MESSAGE_TYPE = 'https://veramo.io/didcomm/starchat/1.0/question'
 const STARCHAT_RESPONSE_MESSAGE_TYPE = 'https://veramo.io/didcomm/starchat/1.0/response'
 
-export function createStarchatQuestionMessage(queryInput: string, senderDidUrl: string, recipientDidUrl: string): IDIDCommMessage {
+export function createStarchatQuestionMessage(queryInput: string, senderDidUrl: string, recipientDidUrl: string, returnRoute: boolean): IDIDCommMessage {
   return {
     type: STARCHAT_QUESTION_MESSAGE_TYPE,
     from: senderDidUrl,
@@ -23,7 +23,8 @@ export function createStarchatQuestionMessage(queryInput: string, senderDidUrl: 
     body: {
       responseRequested: true,
       queryInput
-    }
+    },
+    return_route: returnRoute ? 'all' : 'none'
   }
 }
 
@@ -44,8 +45,11 @@ export function createStarchatResponse(senderDidUrl: string, recipientDidUrl: st
  * @beta This API may change without a BREAKING CHANGE notice.
  */
 export class StarchatQuestionMessageHandler extends AbstractMessageHandler {
-  constructor() {
+  private hfToken: string
+  constructor(hfToken: string) {
+    console.log("hfToken: ", hfToken)
     super()
+    this.hfToken = hfToken
   }
 
   /**
@@ -55,9 +59,9 @@ export class StarchatQuestionMessageHandler extends AbstractMessageHandler {
   public async handle(message: Message, context: IContext): Promise<Message> {
     if (message.type === STARCHAT_QUESTION_MESSAGE_TYPE) {
       debug('Starchat Message Received')
-      console.log("message: ", message)
+      // console.log("message1: ", message)
       try {
-        const { from, to, id, data } = message
+        const { from, to, id, data, returnRoute } = message
         if (!from) {
           throw new Error("invalid_argument: Starchat Message received without `from` set")
         }
@@ -69,8 +73,8 @@ export class StarchatQuestionMessageHandler extends AbstractMessageHandler {
           throw new Error("invalid_argument: Starchat Message received without `body.queryInput` set")
         }
 
-        const answer = await getAnswer(data.queryInput)
-
+        const answer = await getAnswer(data.queryInput, this.hfToken)
+        // console.log("answer: ", answer)
         const cred = await context.agent.createVerifiableCredential({
           credential: {
             issuer: { id: to },
@@ -78,28 +82,46 @@ export class StarchatQuestionMessageHandler extends AbstractMessageHandler {
             type: ['VerifiableCredential', 'StarchatAnswer'],
             issuanceDate: new Date().toISOString(),
             credentialSubject: {
+              id: from,
               answer,
               model: "HuggingFaceH4/starchat-beta"
             }
           },
-          proofFormat: 'lds'
+          proofFormat: 'jwt'
         })
 
-        console.log("cred: ", cred)
+        // console.log("cred: ", cred)
 
         const response = createStarchatResponse(to!, from!, id, cred)
         const packedResponse = await context.agent.packDIDCommMessage({ message: response, packing: 'authcrypt'})
-        const sent = await context.agent.sendDIDCommMessage({
-          messageId: response.id,
-          packedMessage: packedResponse,
-          recipientDidUrl: from!,
-        })
+        
+        let sent
+        if (returnRoute === 'all') {
+          // attempt to re-use connection
+          const returnResponse = {
+            id: response.id,
+            message: packedResponse.message,
+            contentType: DIDCommMessageMediaType.ENCRYPTED,
+          }
+          message.addMetaData({ type: 'ReturnRouteResponse', value: JSON.stringify(returnResponse) })
+        } else {
+          // don't attempt to re-use
+          sent = await context.agent.sendDIDCommMessage({
+            messageId: response.id,
+            packedMessage: packedResponse,
+            recipientDidUrl: from!,
+          })
+        }
+        
+
         message.addMetaData({ type: 'StarchatResponseSent', value: sent })
       } catch (ex) {
+        console.log("something went wrong: ", ex)
         debug(ex)
       }
       return message
     } else if (message.type === STARCHAT_RESPONSE_MESSAGE_TYPE) {
+      console.log("received!!!")
       debug('StarchatResponse Message Received. msg: ', message)
       message.addMetaData({ type: 'StarchatResponse', value: 'true'})
       return message
