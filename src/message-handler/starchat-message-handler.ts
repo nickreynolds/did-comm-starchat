@@ -36,8 +36,7 @@ export function createStarchatResponse(senderDidUrl: string, recipientDidUrl: st
     to: recipientDidUrl,
     id: `${questionId}-response`,
     thid: questionThid,
-    body: {},
-    attachments: []
+    body: credential
   }
 }
 
@@ -94,6 +93,7 @@ export class StarchatQuestionMessageHandler extends AbstractMessageHandler {
         // console.log("cred: ", cred)
 
         const response = createStarchatResponse(to!, from!, id, threadId, cred)
+        console.log("response: ", response)
         const packedResponse = await context.agent.packDIDCommMessage({ message: response, packing: 'authcrypt'})
         
         let sent
@@ -122,7 +122,7 @@ export class StarchatQuestionMessageHandler extends AbstractMessageHandler {
       }
       return message
     } else if (message.type === STARCHAT_RESPONSE_MESSAGE_TYPE) {
-      console.log("received!!!")
+      console.log("received!!! message: ", message)
       debug('StarchatResponse Message Received. msg: ', message)
       message.addMetaData({ type: 'StarchatResponse', value: 'true'})
       return message
