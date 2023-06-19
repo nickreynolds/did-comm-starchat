@@ -81,7 +81,7 @@ export default (testContext: {
         }
       })
 
-      const questionMessage = createStarchatQuestionMessage("What is rice?", sender.did, receiver.did, false)
+      const questionMessage = createStarchatQuestionMessage("What is rice?", sender.did, receiver.did, "thid1", false)
       const packed = await agent.packDIDCommMessage({
         packing: 'authcrypt',
         message: questionMessage
@@ -130,7 +130,7 @@ export default (testContext: {
         }
       })
 
-      const questionMessage = createStarchatQuestionMessage("What is corn?", sender2.did, receiver2.did, true)
+      const questionMessage = createStarchatQuestionMessage("What is corn?", sender2.did, receiver2.did, "thid2", true)
       const packed = await agent.packDIDCommMessage({
         packing: 'authcrypt',
         message: questionMessage

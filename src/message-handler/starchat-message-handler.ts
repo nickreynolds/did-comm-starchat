@@ -14,13 +14,13 @@ type IContext = IAgentContext<IDIDManager & IKeyManager & IDIDComm & ICredential
 const STARCHAT_QUESTION_MESSAGE_TYPE = 'https://veramo.io/didcomm/starchat/1.0/question'
 const STARCHAT_RESPONSE_MESSAGE_TYPE = 'https://veramo.io/didcomm/starchat/1.0/response'
 
-export function createStarchatQuestionMessage(queryInput: string, senderDidUrl: string, recipientDidUrl: string, returnRoute: boolean): IDIDCommMessage {
+export function createStarchatQuestionMessage(queryInput: string, senderDidUrl: string, recipientDidUrl: string, thid: string, returnRoute: boolean): IDIDCommMessage {
   return {
     type: STARCHAT_QUESTION_MESSAGE_TYPE,
     from: senderDidUrl,
     to: recipientDidUrl,
     id: v4(),
-    thid: v4(),
+    thid,
     body: {
       responseRequested: true,
       queryInput
