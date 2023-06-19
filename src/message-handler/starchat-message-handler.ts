@@ -60,7 +60,7 @@ export class StarchatQuestionMessageHandler extends AbstractMessageHandler {
   public async handle(message: Message, context: IContext): Promise<Message> {
     if (message.type === STARCHAT_QUESTION_MESSAGE_TYPE) {
       debug('Starchat Message Received')
-      // console.log("message1: ", message)
+      console.log("starchat message received: ", message)
       try {
         const { from, to, id, data, returnRoute, threadId } = message
         if (!from) {
