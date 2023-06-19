@@ -20,6 +20,7 @@ export function createStarchatQuestionMessage(queryInput: string, senderDidUrl: 
     from: senderDidUrl,
     to: recipientDidUrl,
     id: v4(),
+    thid: v4(),
     body: {
       responseRequested: true,
       queryInput
@@ -28,13 +29,13 @@ export function createStarchatQuestionMessage(queryInput: string, senderDidUrl: 
   }
 }
 
-export function createStarchatResponse(senderDidUrl: string, recipientDidUrl: string, questionId: string, credential: VerifiableCredential): IDIDCommMessage {
+export function createStarchatResponse(senderDidUrl: string, recipientDidUrl: string, questionId: string, questionThid: string, credential: VerifiableCredential): IDIDCommMessage {
   return {
     type: STARCHAT_RESPONSE_MESSAGE_TYPE,
     from: senderDidUrl,
     to: recipientDidUrl,
     id: `${questionId}-response`,
-    thid: questionId,
+    thid: questionThid,
     body: {},
     attachments: []
   }
@@ -61,7 +62,7 @@ export class StarchatQuestionMessageHandler extends AbstractMessageHandler {
       debug('Starchat Message Received')
       // console.log("message1: ", message)
       try {
-        const { from, to, id, data, returnRoute } = message
+        const { from, to, id, data, returnRoute, threadId } = message
         if (!from) {
           throw new Error("invalid_argument: Starchat Message received without `from` set")
         }
@@ -92,7 +93,7 @@ export class StarchatQuestionMessageHandler extends AbstractMessageHandler {
 
         // console.log("cred: ", cred)
 
-        const response = createStarchatResponse(to!, from!, id, cred)
+        const response = createStarchatResponse(to!, from!, id, threadId, cred)
         const packedResponse = await context.agent.packDIDCommMessage({ message: response, packing: 'authcrypt'})
         
         let sent
