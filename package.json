@@ -1,8 +1,11 @@
 {
   "name": "starchat-veramo-plugin",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "source": "src/index.ts",
   "main": "build/index.js",
+  "exports": {
+    ".": "./build/index.js"
+  },
   "types": "build/index.d.ts",
   "type": "module",
   "scripts": {
