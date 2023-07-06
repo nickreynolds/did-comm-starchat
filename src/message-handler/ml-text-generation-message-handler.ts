@@ -11,8 +11,8 @@ const debug = Debug('veramo:did-comm:ml-text-generation-message-handler')
 
 type IContext = IAgentContext<IDIDManager & IKeyManager & IDIDComm & ICredentialPlugin>
 
-const ML_TEXT_GENERATION_QUESTION_MESSAGE_TYPE = 'https://veramo.io/didcomm/ml-text-generation/1.0/question'
-const ML_TEXT_GENERATION_RESPONSE_MESSAGE_TYPE = 'https://veramo.io/didcomm/ml-text-generation/1.0/response'
+export const ML_TEXT_GENERATION_QUESTION_MESSAGE_TYPE = 'https://veramo.io/didcomm/ml-text-generation/1.0/question'
+export const ML_TEXT_GENERATION_RESPONSE_MESSAGE_TYPE = 'https://veramo.io/didcomm/ml-text-generation/1.0/response'
 
 export function createMLTextGenerationQuestionMessage(queryInput: string, senderDidUrl: string, recipientDidUrl: string, thid: string, returnRoute: boolean): IDIDCommMessage {
   return {
