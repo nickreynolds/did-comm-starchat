@@ -7,31 +7,30 @@ import { DIDCommMessageMediaType, IDIDComm } from '@veramo/did-comm'
 import { IDIDCommMessage } from '@veramo/did-comm'
 import { getAnswer } from './starchat-helper.js'
 
-const debug = Debug('veramo:did-comm:trust-ping-message-handler')
+const debug = Debug('veramo:did-comm:ml-text-generation-message-handler')
 
 type IContext = IAgentContext<IDIDManager & IKeyManager & IDIDComm & ICredentialPlugin>
 
-const STARCHAT_QUESTION_MESSAGE_TYPE = 'https://veramo.io/didcomm/starchat/1.0/question'
-const STARCHAT_RESPONSE_MESSAGE_TYPE = 'https://veramo.io/didcomm/starchat/1.0/response'
+const ML_TEXT_GENERATION_QUESTION_MESSAGE_TYPE = 'https://veramo.io/didcomm/ml-text-generation/1.0/question'
+const ML_TEXT_GENERATION_RESPONSE_MESSAGE_TYPE = 'https://veramo.io/didcomm/ml-text-generation/1.0/response'
 
-export function createStarchatQuestionMessage(queryInput: string, senderDidUrl: string, recipientDidUrl: string, thid: string, returnRoute: boolean): IDIDCommMessage {
+export function createMLTextGenerationQuestionMessage(queryInput: string, senderDidUrl: string, recipientDidUrl: string, thid: string, returnRoute: boolean): IDIDCommMessage {
   return {
-    type: STARCHAT_QUESTION_MESSAGE_TYPE,
+    type: ML_TEXT_GENERATION_QUESTION_MESSAGE_TYPE,
     from: senderDidUrl,
     to: recipientDidUrl,
     id: v4(),
     thid,
     body: {
-      responseRequested: true,
       queryInput
     },
     return_route: returnRoute ? 'all' : 'none'
   }
 }
 
-export function createStarchatResponse(senderDidUrl: string, recipientDidUrl: string, questionId: string, questionThid: string, credential: VerifiableCredential): IDIDCommMessage {
+export function createMLTextGenerationResponse(senderDidUrl: string, recipientDidUrl: string, questionId: string, questionThid: string, credential: VerifiableCredential): IDIDCommMessage {
   return {
-    type: STARCHAT_RESPONSE_MESSAGE_TYPE,
+    type: ML_TEXT_GENERATION_RESPONSE_MESSAGE_TYPE,
     from: senderDidUrl,
     to: recipientDidUrl,
     id: `${questionId}-response`,
@@ -44,10 +43,9 @@ export function createStarchatResponse(senderDidUrl: string, recipientDidUrl: st
  * A plugin for the {@link @veramo/message-handler#MessageHandler} that handles Starchat messages.
  * @beta This API may change without a BREAKING CHANGE notice.
  */
-export class StarchatQuestionMessageHandler extends AbstractMessageHandler {
+export class MLTextGenerationQuestionMessageHandler extends AbstractMessageHandler {
   private hfToken: string
   constructor(hfToken: string) {
-    console.log("hfToken: ", hfToken)
     super()
     this.hfToken = hfToken
   }
@@ -57,9 +55,8 @@ export class StarchatQuestionMessageHandler extends AbstractMessageHandler {
    * https://identity.foundation/didcomm-messaging/spec/#trust-ping-protocol-10
    */
   public async handle(message: Message, context: IContext): Promise<Message> {
-    if (message.type === STARCHAT_QUESTION_MESSAGE_TYPE) {
-      debug('Starchat Message Received')
-      console.log("starchat message received: ", message)
+    if (message.type === ML_TEXT_GENERATION_QUESTION_MESSAGE_TYPE) {
+      debug('ML Text Generation Question Message Received')
       try {
         const { from, to, id, data, returnRoute, threadId } = message
         if (!from) {
@@ -74,26 +71,25 @@ export class StarchatQuestionMessageHandler extends AbstractMessageHandler {
         }
 
         const answer = await getAnswer(data.queryInput, this.hfToken)
-        console.log("answer: ", answer)
         const cred = await context.agent.createVerifiableCredential({
           credential: {
             issuer: { id: to },
             '@context': ['https://www.w3.org/2018/credentials/v1'],
-            type: ['VerifiableCredential', 'StarchatAnswer'],
+            type: ['VerifiableCredential', 'TextGenerationAnswer'],
             issuanceDate: new Date().toISOString(),
             credentialSubject: {
               id: from,
+              question: data.queryInput,
               answer,
-              model: "HuggingFaceH4/starchat-beta"
+              model: "HuggingFaceH4/starchat-beta",
+              license: "bigcode-openrail-m",
+              linkedPapers: ["arxiv:1911.02150", "arxiv:2205.14135"]
             }
           },
           proofFormat: 'jwt'
         })
 
-        // console.log("cred: ", cred)
-
-        const response = createStarchatResponse(to!, from!, id, threadId, cred)
-        console.log("response: ", response)
+        const response = createMLTextGenerationResponse(to!, from!, id, threadId, cred)
         const packedResponse = await context.agent.packDIDCommMessage({ message: response, packing: 'authcrypt'})
         
         let sent
@@ -117,14 +113,8 @@ export class StarchatQuestionMessageHandler extends AbstractMessageHandler {
 
         message.addMetaData({ type: 'StarchatResponseSent', value: sent })
       } catch (ex) {
-        console.log("something went wrong: ", ex)
         debug(ex)
       }
-      return message
-    } else if (message.type === STARCHAT_RESPONSE_MESSAGE_TYPE) {
-      console.log("received!!! message: ", message)
-      debug('StarchatResponse Message Received. msg: ', message)
-      message.addMetaData({ type: 'StarchatResponse', value: 'true'})
       return message
     }
 

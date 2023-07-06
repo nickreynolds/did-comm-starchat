@@ -1,7 +1,7 @@
 // noinspection ES6PreferShortImport
 
 import { TAgent, IMessageHandler, ICredentialPlugin, IDIDManager, IKeyManager, IDataStore, IDataStoreORM, IResolver } from '@veramo/core-types'
-import { createStarchatQuestionMessage } from '../../src/message-handler/starchat-message-handler.js'
+import { createMLTextGenerationQuestionMessage } from '../../src/message-handler/ml-text-generation-message-handler.js'
 import { IDIDComm } from '@veramo/did-comm'
 import { ICredentialIssuerLD } from '@veramo/credential-ld'
 import { MessagingRouter, RequestWithAgentRouter } from '@veramo/remote-server'
@@ -81,7 +81,7 @@ export default (testContext: {
         }
       })
 
-      const questionMessage = createStarchatQuestionMessage("What is rice?", sender.did, receiver.did, "thid1", false)
+      const questionMessage = createMLTextGenerationQuestionMessage("What is rice?", sender.did, receiver.did, "thid1", false)
       const packed = await agent.packDIDCommMessage({
         packing: 'authcrypt',
         message: questionMessage
@@ -130,7 +130,7 @@ export default (testContext: {
         }
       })
 
-      const questionMessage = createStarchatQuestionMessage("What is corn?", sender2.did, receiver2.did, "thid2", true)
+      const questionMessage = createMLTextGenerationQuestionMessage("What is corn?", sender2.did, receiver2.did, "thid2", true)
       const packed = await agent.packDIDCommMessage({
         packing: 'authcrypt',
         message: questionMessage

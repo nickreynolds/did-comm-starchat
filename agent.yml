@@ -161,7 +161,7 @@ messageHandler:
         - $require: '@veramo/did-jwt#JwtMessageHandler'
         - $require: '@veramo/credential-w3c#W3cMessageHandler'
         - $require: '@veramo/selective-disclosure#SdrMessageHandler'
-        - $require: './build#StarchatQuestionMessageHandler'
+        - $require: './build#MLTextGenerationQuestionMessageHandler'
           $args: 
             - hfToken: 
               $ref: /constants/huggingFaceToken

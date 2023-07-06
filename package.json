@@ -1,6 +1,6 @@
 {
-  "name": "starchat-veramo-plugin",
-  "version": "1.0.5",
+  "name": "ml-veramo-message-handler",
+  "version": "1.0.1",
   "source": "src/index.ts",
   "main": "build/index.js",
   "exports": {
