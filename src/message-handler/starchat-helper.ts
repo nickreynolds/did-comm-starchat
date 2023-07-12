@@ -7,8 +7,6 @@ async function query(data: any, token: string): Promise<any> {
 			body: JSON.stringify(data),
 		}
 	);
-	// console.log("resposne: ", response)
-	// console.log("response.body: ", response.body)
 	const result = await response.blob();
 	return result;
 }
@@ -17,11 +15,9 @@ export async function getAnswer(queryInput: string, token: string): Promise<stri
 	const modQuery = queryInput + "<|end|>\n<|assistant|>\n"
 
 	const res = await query({"inputs": modQuery}, token)
-	// console.log("res: ", res)
 
 	const text = await res.text()
-	// console.log("text: ", text)
-	let generatedText: string = JSON.parse(await res.text())[0].generated_text
+	let generatedText: string = JSON.parse(text)[0].generated_text
 	let iterations = 0
 
 	let answer = generatedText.substring(modQuery.length)
@@ -38,7 +34,6 @@ export async function getAnswer(queryInput: string, token: string): Promise<stri
 	if (end > 0) {
 		finalAnswer = answer.substring(0, end)
 	}
-	// console.log("finalAnswer: ", finalAnswer)
 	return finalAnswer
 }
 

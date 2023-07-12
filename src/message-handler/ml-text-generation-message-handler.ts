@@ -11,18 +11,18 @@ const debug = Debug('veramo:did-comm:ml-text-generation-message-handler')
 
 type IContext = IAgentContext<IDIDManager & IKeyManager & IDIDComm & ICredentialPlugin>
 
-export const ML_TEXT_GENERATION_QUESTION_MESSAGE_TYPE = 'https://veramo.io/didcomm/ml-text-generation/1.0/question'
+export const ML_TEXT_GENERATION_PROMPT_MESSAGE_TYPE = 'https://veramo.io/didcomm/ml-text-generation/1.0/prompt'
 export const ML_TEXT_GENERATION_RESPONSE_MESSAGE_TYPE = 'https://veramo.io/didcomm/ml-text-generation/1.0/response'
 
-export function createMLTextGenerationQuestionMessage(queryInput: string, senderDidUrl: string, recipientDidUrl: string, thid: string, returnRoute: boolean): IDIDCommMessage {
+export function createMLTextGenerationPromptMessage(prompt: string, senderDidUrl: string, recipientDidUrl: string, thid: string, returnRoute: boolean): IDIDCommMessage {
   return {
-    type: ML_TEXT_GENERATION_QUESTION_MESSAGE_TYPE,
+    type: ML_TEXT_GENERATION_PROMPT_MESSAGE_TYPE,
     from: senderDidUrl,
     to: recipientDidUrl,
     id: v4(),
     thid,
     body: {
-      queryInput
+      prompt
     },
     return_route: returnRoute ? 'all' : 'none'
   }
@@ -39,11 +39,31 @@ export function createMLTextGenerationResponse(senderDidUrl: string, recipientDi
   }
 }
 
+function createCredential(context: IAgentContext<ICredentialPlugin>, response: string, prompt: string, from: string, to: string): Promise<VerifiableCredential> {
+  return context.agent.createVerifiableCredential({
+    credential: {
+      issuer: { id: to },
+      '@context': ['https://www.w3.org/2018/credentials/v1'],
+      type: ['VerifiableCredential', 'TextGenerationResponse'],
+      issuanceDate: new Date().toISOString(),
+      credentialSubject: {
+        id: from,
+        prompt,
+        response,
+        model: "HuggingFaceH4/starchat-beta",
+        license: "bigcode-openrail-m",
+        linkedPapers: ["arxiv:1911.02150", "arxiv:2205.14135"]
+      }
+    },
+    proofFormat: 'jwt'
+  })
+}
+
 /**
  * A plugin for the {@link @veramo/message-handler#MessageHandler} that handles Starchat messages.
  * @beta This API may change without a BREAKING CHANGE notice.
  */
-export class MLTextGenerationQuestionMessageHandler extends AbstractMessageHandler {
+export class MLTextGenerationPromptMessageHandler extends AbstractMessageHandler {
   private hfToken: string
   constructor(hfToken: string) {
     super()
@@ -55,8 +75,8 @@ export class MLTextGenerationQuestionMessageHandler extends AbstractMessageHandl
    * https://identity.foundation/didcomm-messaging/spec/#trust-ping-protocol-10
    */
   public async handle(message: Message, context: IContext): Promise<Message> {
-    if (message.type === ML_TEXT_GENERATION_QUESTION_MESSAGE_TYPE) {
-      debug('ML Text Generation Question Message Received')
+    if (message.type === ML_TEXT_GENERATION_PROMPT_MESSAGE_TYPE) {
+      debug('ML Text Generation Prompt Message Received')
       try {
         const { from, to, id, data, returnRoute, threadId } = message
         if (!from) {
@@ -66,28 +86,12 @@ export class MLTextGenerationQuestionMessageHandler extends AbstractMessageHandl
           throw new Error("invalid_argument: Starchat Message received without `to` set")
         }
 
-        if (!data.queryInput) {
-          throw new Error("invalid_argument: Starchat Message received without `body.queryInput` set")
+        if (!data.prompt) {
+          throw new Error("invalid_argument: Starchat Message received without `body.prompt` set")
         }
 
-        const answer = await getAnswer(data.queryInput, this.hfToken)
-        const cred = await context.agent.createVerifiableCredential({
-          credential: {
-            issuer: { id: to },
-            '@context': ['https://www.w3.org/2018/credentials/v1'],
-            type: ['VerifiableCredential', 'TextGenerationAnswer'],
-            issuanceDate: new Date().toISOString(),
-            credentialSubject: {
-              id: from,
-              question: data.queryInput,
-              answer,
-              model: "HuggingFaceH4/starchat-beta",
-              license: "bigcode-openrail-m",
-              linkedPapers: ["arxiv:1911.02150", "arxiv:2205.14135"]
-            }
-          },
-          proofFormat: 'jwt'
-        })
+        const answer = await getAnswer(data.prompt, this.hfToken)
+        const cred = await createCredential(context, answer, data.prompt, from, to)
 
         const response = createMLTextGenerationResponse(to!, from!, id, threadId, cred)
         const packedResponse = await context.agent.packDIDCommMessage({ message: response, packing: 'authcrypt'})
@@ -111,7 +115,7 @@ export class MLTextGenerationQuestionMessageHandler extends AbstractMessageHandl
         }
         
 
-        message.addMetaData({ type: 'StarchatResponseSent', value: sent })
+        message.addMetaData({ type: 'ML Text Generation Response Sent', value: sent })
       } catch (ex) {
         debug(ex)
       }
